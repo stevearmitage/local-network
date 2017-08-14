@@ -1,0 +1,123 @@
+{
+        "firewall": {
+                "modify": {
+                        "OPENVPN-UK": {
+                                "rule": {
+                                        "5000": {
+                                                "action": "modify",
+                                                "description": "Allow UK clients to access vtun0",
+                                                "modify": {
+                                                        "table": "1"
+                                                },
+                                                "source": {
+                                                        "address": "10.0.1.0/28"
+                                                }
+                                        }
+                                }
+                        },
+                        "OPENVPN-US": {
+                                "rule": {
+                                        "5000": {
+                                                "action": "modify",
+                                                "description": "Allow US clients to access vtun1",
+                                                "modify": {
+                                                        "table": "2"
+                                                },
+                                                "source": {
+                                                        "address": "10.0.2.0/28"
+                                                }
+                                        }
+                                }
+                        }
+                }
+        },
+        "interfaces": {
+                "ethernet": {
+                        "eth1": {
+                                "vif": {
+                                        "10": {
+                                                "firewall": {
+                                                        "in": {
+                                                                "modify": "OPENVPN-UK"
+                                                        }
+                                                }
+                                        },
+                                        "20": {
+                                                "firewall": {
+                                                        "in": {
+                                                                "modify": "OPENVPN-US"
+                                                        }
+                                                }
+                                        }
+                                }
+                        }
+                },
+                "openvpn": {
+                        "vtun0": {
+                                "config-file": "/config/openvpn/uk94.nordvpn.com.udp1194.ovpn",
+                                "description": "UK OpenVPN tunnel"
+                        },
+                        "vtun1": {
+                                "config-file": "/config/openvpn/us730.nordvpn.com.udp1194.ovpn",
+                                "description": "US OpenVPN tunnel"
+                        }
+                }
+        },
+        "protocols": {
+                "static": {
+                        "table": {
+                                "1": {
+                                        "interface-route": {
+                                                "0.0.0.0/0": {
+                                                        "next-hop-interface": {
+                                                                "vtun0": "''"
+                                                        }
+                                                }
+                                        }
+                                },
+                                "2": {
+                                        "interface-route": {
+                                                "0.0.0.0/0": {
+                                                        "next-hop-interface": {
+                                                                "vtun1": "''"
+                                                        }
+                                                }
+                                        }
+                                }
+                        }
+                }
+        },
+        "service": {
+                "nat": {
+                        "rule": {
+                                "5000": {
+                                        "description": "Route UK OpenVPN clients",
+                                        "log": "disable",
+                                        "outbound-interface": "vtun0",
+                                        "source": {
+                                                "address": "10.0.1.0/28"
+                                        },
+                                        "type": "masquerade"
+                                },
+                                "5001": {
+                                        "description": "Route US OpenVPN clients",
+                                        "log": "disable",
+                                        "outbound-interface": "vtun1",
+                                        "source": {
+                                                "address": "10.0.2.0/28"
+                                        },
+                                        "type": "masquerade"
+                                },
+                                "5002": {
+                                        "description": "Route all other clients",
+                                        "log": "disable",
+                                        "outbound-interface": "eth0",
+                                        "source": {
+                                                "address": "10.0.0.0/27"
+                                        },
+                                        "type": "masquerade"
+                                }
+                        }
+                }
+        }
+}

@@ -1,0 +1,59 @@
+# based on https://community.ubnt.com/t5/EdgeMAX/OpenVPN-Client-Setup-for-Private-Internet-Access/m-p/1154803/highlight/true#M53644
+#
+
+sudo -i
+configure
+
+# 1 Setup the VPN tunnels
+set interfaces openvpn vtun0 config-file /config/openvpn/uk84.nordvpn.com.udp1194.ovpn
+set interfaces openvpn vtun0 description 'UK OpenVPN tunnel'
+ 
+set interfaces openvpn vtun1 config-file /config/openvpn/us729.nordvpn.com.udp1194.ovpn
+set interfaces openvpn vtun1 description 'US OpenVPN tunnel'
+
+commit
+
+# 2 Route the appropriate devices though the related VPN tunnels 
+set service nat rule 5000 description 'Route UK OpenVPN clients'
+set service nat rule 5000 log disable
+set service nat rule 5000 outbound-interface vtun0
+set service nat rule 5000 source address 10.0.1.0/28
+set service nat rule 5000 type masquerade
+
+set service nat rule 5001 description 'Route US OpenVPN clients'
+set service nat rule 5001 log disable
+set service nat rule 5001 outbound-interface vtun1
+set service nat rule 5001 source address 10.0.2.0/28
+set service nat rule 5001 type masquerade
+ 
+set service nat rule 5002 description 'Route all other clients'
+set service nat rule 5002 log disable
+set service nat rule 5002 outbound-interface eth0
+set service nat rule 5002 source address 10.0.0.0/27
+set service nat rule 5002 type masquerade
+ 
+# 3 Create a static route using interface vTun0 as next-hop:   
+set protocols static table 1 interface-route 0.0.0.0/0 next-hop-interface vtun0
+set protocols static table 2 interface-route 0.0.0.0/0 next-hop-interface vtun1
+
+commit
+ 
+# 4 Create a firewall modify rule for each host you want to route through the Open VPN tunnel.  
+set firewall modify OPENVPN-UK rule 5000 description 'Allow UK clients to access vtun0'
+set firewall modify OPENVPN-UK rule 5000 source address 10.0.1.0/28
+set firewall modify OPENVPN-UK rule 5000 modify table 1
+
+set firewall modify OPENVPN-US rule 5000 description 'Allow US clients to access vtun1'
+set firewall modify OPENVPN-US rule 5000 source address 10.0.2.0/28
+set firewall modify OPENVPN-US rule 5000 modify table 2
+
+commit
+ 
+# 5 Apply the firewall modify rule "in" to your LAN interface.  
+set interfaces ethernet eth1 vif 10 firewall in modify OPENVPN-UK
+set interfaces ethernet eth1 vif 20 firewall in modify OPENVPN-US
+ 
+commit
+save
+exit
+

@@ -1,0 +1,34 @@
+#
+#
+
+sudo -i
+configure
+
+delete interfaces ethernet eth1 vif 10 firewall in modify OPENVPN-UK
+delete interfaces ethernet eth1 vif 20 firewall in modify OPENVPN-US
+
+commit
+
+delete firewall modify OPENVPN-UK
+delete firewall modify OPENVPN-US
+
+commit
+
+delete protocols static table 1 interface-route 0.0.0.0/0
+delete protocols static table 2 interface-route 0.0.0.0/0
+
+commit
+
+delete service nat rule 5000
+delete service nat rule 5001
+delete service nat rule 5002
+
+commit
+
+delete interfaces openvpn vtun0
+delete interfaces openvpn vtun1
+
+commit
+save
+exit
+
